@@ -1,0 +1,7 @@
+insert into students values('maheshwar','mahesh12war34@gmail.com','311519106057','mahesh12');
+insert into students values('divija','divijaml@gmail.com','311519106025','divi25');
+insert into students values('aakashkumar','aakaash312@gmail.com','311519106001','aakaash32');
+insert into students values('madhumitha','madhumitha@gmail.com','311519106055','madhu24');
+update students set password='aakaah312' where rollno='311519106001';
+insert into students values('karthik','karthi234@gmail.com','311519106060','karthi');
+delete from students where rollno='311519106060';
