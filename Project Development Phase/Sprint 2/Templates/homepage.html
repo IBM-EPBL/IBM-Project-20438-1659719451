@@ -1,0 +1,71 @@
+{% extends 'base.html' %} {% block body %}
+<style>
+  body {
+    /* background-image: url('../static/images/hb2.png'); */
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    overflow: hidden;
+  }
+  img {
+    border-radius: 14px;
+  }
+
+  p {
+    position: relative;
+    right: -680px;
+    top: -300px;
+    font-family: monospace;
+    font-size: 18px;
+    color: #000000;
+  }
+
+  .ccc {
+    position: relative;
+    top: 80px;
+    left: -100px;
+    bottom: 100px;
+  }
+</style>
+<div id="aa" class="container">
+  <div class="ccc">
+    <!-- <img height="450px" width="450px" style="position: relative; top: 50px; left: 90PX;" src="../static/images/homepage1.png"> -->
+    <img
+      style="margin-right: 20px; max-width: 100%"
+      src="../static/images/hbg1.jpg"
+    />
+    <h1
+      style="
+        position: relative;
+        right: -650px;
+        top: -350px;
+        color: #000000;
+        font-size: 50px;
+        margin-left: 20px;
+      "
+    >
+      Let's Start Our Journey Together
+    </h1>
+    <p>
+      MMAD helps you to save your money from unnecessary expenses,<br />
+      to maintain budget and analyse the expense...
+    </p>
+    <img
+      height="125px"
+      width="13%"
+      style="position: relative; top: -665px; left: -50px"
+      src=""
+    />
+  </div>
+  <span
+    class="btn btn-outline-dark"
+    style="
+      position: relative;
+      right: -650px;
+      top: -310px;
+      color: rgb(221, 67, 157);
+    "
+    ><a style="color: black" href="/add">Let's Begin</a></span
+  >
+</div>
+
+{% endblock %}

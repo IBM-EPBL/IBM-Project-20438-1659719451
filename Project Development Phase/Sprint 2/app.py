@@ -1,0 +1,304 @@
+from flask import Flask, render_template, request, redirect, session ,url_for
+import ibm_db
+import re
+import sendemail
+
+app = Flask(__name__)
+
+app.secret_key = 'a'
+
+connection = ibm_db.connect("DATABASE=bludb;HOSTNAME=9938aec0-8105-433e-8bf9-0fbb7e483086.c1ogj3sd0tgtu0lqde00.databases.appdomain.cloud;PORT=32459;SECURITY=SSL;SSLServiceCertificate=DigiCertGlobalRootCA.crt;UID=njl64817;PWD=gaHRlHcT8nyConim",'','')
+  
+
+
+
+@app.route("/home")
+def home():
+    return render_template("homepage.html")
+
+@app.route("/")
+def add():
+    return render_template("home.html")
+
+
+
+
+
+@app.route("/signup")
+def signup():
+    return render_template("signup.html")
+
+
+
+@app.route('/register', methods =['GET', 'POST'])
+def register():
+    global user_email
+    msg = ''
+    if request.method == 'POST' :
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        query = "SELECT * FROM register WHERE email=?;"
+        stmt = ibm_db.prepare(connection, query)
+        ibm_db.bind_param(stmt, 1, email)
+        ibm_db.execute(stmt)
+        account = ibm_db.fetch_assoc(stmt)
+        print(account)
+        if account:
+            msg = 'Account already exists !'
+        elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+            msg = 'Invalid email address !'
+        elif not re.match(r'[A-Za-z0-9]+', username):
+            msg = 'name must contain only characters and numbers !'
+        else:
+            query = "INSERT INTO register values(?,?,?);"
+            stmt = ibm_db.prepare(connection, query)
+            ibm_db.bind_param(stmt, 1, username)
+            ibm_db.bind_param(stmt, 2, email)
+            ibm_db.bind_param(stmt, 3, password)
+            ibm_db.execute(stmt)
+            session['loggedin'] = True
+            session['id'] = email
+            user_email = email
+            session['email'] = email
+            session['username'] = username
+
+            msg = 'You have successfully registered ! Proceed Login Process'
+            return render_template('login.html', msg = msg)
+    else:
+        msg = 'PLEASE FILL OUT OF THE FORM'
+        return render_template('register.html', msg=msg)
+        
+ 
+        
+    
+@app.route("/signin")
+def signin():
+    return render_template('login.html')
+        
+@app.route('/login',methods =['GET', 'POST'])
+def login():
+    global user_email
+    msg = ''
+    
+    if request.method == 'POST' :
+        email = request.form['email']
+        password = request.form['password']
+        sql = "SELECT * FROM register WHERE email =? AND password=?;"
+        stmt = ibm_db.prepare(connection, sql)
+        ibm_db.bind_param(stmt,1,email)
+        ibm_db.bind_param(stmt,2,password)
+        ibm_db.execute(stmt)
+        account = ibm_db.fetch_assoc(stmt)
+        print (account)
+        
+        if account:
+            session['loggedin'] = True
+            session['id'] = account['EMAIL']
+            user_email=  account['EMAIL']
+            session['email']=account['EMAIL']
+            session['username'] = account['USERNAME']
+           
+            return redirect('/home')
+        else:
+            msg = 'Incorrect username / password !'
+    return render_template('login.html', msg = msg)
+
+
+
+@app.route("/forgot")
+def forgot():
+    return render_template('forgot.html')
+        
+@app.route("/forgotpw", methods =['GET', 'POST'])
+def forgotpw():
+    msg = ''
+    if request.method == 'POST' :
+        email = request.form['email']
+        password = request.form['password']
+        query = "SELECT * FROM register WHERE email=?;"
+        stmt = ibm_db.prepare(connection, query)
+        ibm_db.bind_param(stmt, 1, email)
+        ibm_db.execute(stmt)
+        account = ibm_db.fetch_assoc(stmt)
+        print(account)
+        if account:
+            query = "UPDATE register SET password = ? WHERE email = ?;"
+            stmt = ibm_db.prepare(connection, query)
+            ibm_db.bind_param(stmt, 1, password)
+            ibm_db.bind_param(stmt, 2, email)
+            ibm_db.execute(stmt)
+            msg = 'Successfully changed your password ! Proceed Login Process'
+            return render_template('login.html', msg = msg)
+    else:
+        msg = 'PLEASE FILL OUT THE CORRECT DETAILS'
+        return render_template('forgot.html', msg=msg)
+
+
+
+
+
+
+
+
+
+@app.route("/display")
+def display():
+    query = "SELECT * FROM expenses where id = ? ORDER BY 'dates' DESC"
+    stmt = ibm_db.prepare(connection, query)
+    ibm_db.bind_param(stmt, 1, session['email'])
+    ibm_db.execute(stmt) 
+    dictionary=ibm_db.fetch_assoc(stmt)
+    rexpense=[]
+    while dictionary != False:
+        exp=(dictionary["ID"],dictionary["DATES"],dictionary["EXPENSENAME"],dictionary["AMOUNT"],dictionary["PAYMODE"],dictionary["CATEGORY"],dictionary["IDX"])
+        rexpense.append(exp)
+        dictionary = ibm_db.fetch_assoc(stmt)
+    query = "SELECT MONTH(dates) as DATES, SUM(amount) as AMOUNT FROM expenses WHERE id=? AND YEAR(dates)= YEAR(now()) GROUP BY MONTH(dates);"
+    stmt = ibm_db.prepare(connection, query)
+    ibm_db.bind_param(stmt, 1,session['email'])
+    ibm_db.execute(stmt)
+    dictionary=ibm_db.fetch_assoc(stmt)
+    texpense=[]
+    while dictionary != False:
+        exp=(dictionary["DATES"],dictionary["AMOUNT"])
+        texpense.append(exp)
+        dictionary = ibm_db.fetch_assoc(stmt)
+    print(texpense)
+      
+    query = "SELECT * FROM expenses WHERE id = ? AND YEAR(dates)= YEAR(now());"
+    stmt = ibm_db.prepare(connection, query)
+    ibm_db.bind_param(stmt, 1,session['email'])
+    ibm_db.execute(stmt)
+    dictionary=ibm_db.fetch_assoc(stmt)
+    expense=[]
+    while dictionary != False:
+        exp=(dictionary["ID"],dictionary["DATES"],dictionary["EXPENSENAME"],dictionary["AMOUNT"],dictionary["PAYMODE"],dictionary["CATEGORY"],dictionary["IDX"])
+        expense.append(exp)
+        dictionary = ibm_db.fetch_assoc(stmt)
+  
+    total=0
+    t_food=0
+    t_entertainment=0
+    t_business=0
+    t_rent=0
+    t_EMI=0
+    t_career=0
+    t_other=0
+ 
+     
+    for x in expense:
+          total += x[3]
+          if x[5] == "food":
+              t_food += x[3]
+            
+          elif x[5] == "entertainment":
+              t_entertainment  += x[3]
+        
+          elif x[5] == "business":
+              t_business  += x[3]
+          elif x[5] == "rent":
+              t_rent  += x[3]
+           
+          elif x[5] == "EMI":
+              t_EMI  += x[3]
+          elif x[5] == "Career":
+              t_career += x[3]
+         
+          elif x[5] == "other":
+              t_other  += x[3]
+            
+    print(total)
+    print(expense)
+    print(t_food)
+    print(t_entertainment)
+    print(t_business)
+    print(t_rent)
+    print(t_EMI)
+    print(t_career)
+    print(t_other)
+    qur = "SELECT * FROM expenses WHERE id = ? AND MONTH(dates)= MONTH(now());"
+    stt = ibm_db.prepare(connection, qur)
+    ibm_db.bind_param(stt, 1, session['email'])
+    ibm_db.execute(stt)
+    dictionary=ibm_db.fetch_assoc(stt)
+    lexpense=[]
+    while dictionary != False:
+        exp=(dictionary["ID"],dictionary["DATES"],dictionary["EXPENSENAME"],dictionary["AMOUNT"],dictionary["PAYMODE"],dictionary["CATEGORY"],dictionary["IDX"])
+        lexpense.append(exp)
+        dictionary = ibm_db.fetch_assoc(stt)
+
+    ttotal=0
+    to_food=0
+    to_entertainment=0
+    to_business=0
+    to_rent=0
+    to_EMI=0
+    to_other=0
+ 
+     
+    for x in lexpense:
+          ttotal += x[3]
+          if x[5] == "food":
+              to_food += x[3]
+            
+          elif x[5] == "entertainment":
+              to_entertainment  += x[3]
+        
+          elif x[5] == "business":
+              to_business  += x[3]
+          elif x[5] == "rent":
+              to_rent  += x[3]
+           
+          elif x[5] == "EMI":
+              to_EMI  += x[3]
+         
+          elif x[5] == "other":
+              to_other  += x[3]
+            
+    print(ttotal)
+
+
+    qy = "SELECT max(IDX) as IDX FROM limits where id=?;"
+    smt = ibm_db.prepare(connection, qy)
+    ibm_db.bind_param(smt, 1, session['email'])
+    ibm_db.execute(smt)
+    dictionary = ibm_db.fetch_assoc(smt)
+    uexpense=[]
+    while dictionary != False:
+        exp=(dictionary["IDX"])
+        uexpense.append(exp)
+        dictionary = ibm_db.fetch_assoc(smt)
+    k=uexpense[0]
+    qu = "SELECT NUMBER FROM limits where id=? and idx=?"
+    sm = ibm_db.prepare(connection, qu)
+    ibm_db.bind_param(sm, 1, session['email'])
+    ibm_db.bind_param(sm, 2, k)
+    ibm_db.execute(sm)
+    dictionary = ibm_db.fetch_assoc(sm)
+    fexpense=[]
+    while dictionary != False:
+        exp=(dictionary["NUMBER"])
+        fexpense.append(exp)
+        dictionary = ibm_db.fetch_assoc(stmt)
+    
+    if len(fexpense) <= 0:
+        print("Enter the limit First")
+    else:
+        if ttotal > fexpense[0]:
+            m=sendemail.sendgridmail(session["email"])
+            print(m)
+        else: print("Error")
+
+
+     
+    return render_template("display.html",rexpense=rexpense, texpense = texpense, expense = expense,  total = total ,
+                           t_food = t_food,t_entertainment =  t_entertainment,
+                           t_business = t_business,  t_rent =  t_rent, 
+                           t_EMI =  t_EMI, t_career = t_career , t_other =  t_other )
+   
+    
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
