@@ -1,0 +1,26 @@
+{% extends 'base.html' %} {% block body %}
+
+<p style="text-align: center; font-size: 50px">
+  Currently your MONTHLY limit is ₹ <span style="color: red">{{y}}</span>
+</p>
+
+<form
+  action="/limitnum"
+  method="POST"
+  style="text-align: center; font-size: 50px"
+>
+  <p style="text-align: center">
+    ENTER the MONTHLY LIMIT to avoid over EXPENSES
+  </p>
+  <br />
+  <input type="number" name="number" required />
+  <span style="text-align: center">
+    <input
+      style="font-size: 40px"
+      class="btn btn-warning"
+      type="submit"
+      name="ENTER"
+    />
+  </span>
+</form>
+{% endblock %}
